@@ -1,17 +1,17 @@
 #Requires -Version 5.1
 # ============================================================
-#  RUN THIS FIRST (as Administrator).
+#  STEP 1 — RUN THIS FIRST: 1-setup-task.ps1 (as Administrator).
 #
 #  One-time installer. Registers a Windows scheduled task that
-#  starts update-odysseus.ps1 in the background at every logon,
+#  starts 2-update-odysseus.ps1 in the background at every logon,
 #  so updates keep happening without an open window.
 #
-#  The check interval lives in update-odysseus.ps1 (default 24h);
+#  The check interval lives in 2-update-odysseus.ps1 (default 24h);
 #  override it here with -IntervalHours.
 #
 #  Usage (Administrator PowerShell):
-#    .\setup-task.ps1 -RepoPath C:\path\to\odysseus
-#    .\setup-task.ps1 -RepoPath C:\path\to\odysseus -IntervalHours 12
+#    .\1-setup-task.ps1 -RepoPath C:\path\to\odysseus
+#    .\1-setup-task.ps1 -RepoPath C:\path\to\odysseus -IntervalHours 12
 #
 #  Remove later:
 #    Unregister-ScheduledTask -TaskName 'Odysseus Auto-Update' -Confirm:$false
@@ -28,7 +28,7 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] `
 ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) { throw 'Run this from an Administrator PowerShell window.' }
 
-$worker = Join-Path $PSScriptRoot 'update-odysseus.ps1'
+$worker = Join-Path $PSScriptRoot '2-update-odysseus.ps1'
 if (-not (Test-Path $worker)) { throw "Worker script not found: $worker" }
 
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
@@ -44,5 +44,5 @@ Register-ScheduledTask -TaskName 'Odysseus Auto-Update' `
     -Force | Out-Null
 
 Write-Host "Registered 'Odysseus Auto-Update'. It starts at logon and checks every $IntervalHours hour(s)."
-Write-Host "To start it right now without logging out, run:"
-Write-Host "  .\update-odysseus.ps1 -RepoPath `"$RepoPath`" -IntervalHours $IntervalHours"
+Write-Host "To start it right now without logging out, run Step 2:"
+Write-Host "  .\2-update-odysseus.ps1 -RepoPath `"$RepoPath`" -IntervalHours $IntervalHours"

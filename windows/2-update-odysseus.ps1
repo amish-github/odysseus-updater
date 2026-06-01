@@ -1,6 +1,8 @@
 #Requires -Version 5.1
 # ============================================================
-#  Odysseus Updater (Windows)
+#  STEP 2 — the updater: 2-update-odysseus.ps1
+#  (Step 1 / 1-setup-task.ps1 runs this for you in the background.
+#   You can also run it directly to start updating right now.)
 #
 #  CONFIG: how often (in HOURS) to check for updates.
 #  Default is 24. Change the number below to 12, 6, etc.

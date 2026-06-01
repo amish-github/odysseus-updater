@@ -17,19 +17,21 @@ Default is **24**. Change it to whatever you want (e.g. `12`, `6`):
 
 ## Windows
 
-There are two scripts. **Run `setup-task.ps1` first**, as Administrator — it
-installs a background task that auto-starts the updater at every logon:
+Run the two scripts in numbered order.
+
+**Step 1 — `1-setup-task.ps1`** (run as Administrator). Installs a background
+task that auto-starts the updater at every logon:
 
 ```powershell
-# 1. Open PowerShell as Administrator, then:
-.\windows\setup-task.ps1 -RepoPath C:\path\to\odysseus
+# Open PowerShell as Administrator, then:
+.\windows\1-setup-task.ps1 -RepoPath C:\path\to\odysseus
 ```
 
-`update-odysseus.ps1` is the worker the task runs. You don't have to run it by
-hand, but you can start it immediately (without logging out) like this:
+**Step 2 — `2-update-odysseus.ps1`** is the worker the task runs. You don't have
+to run it by hand, but you can start it immediately (without logging out):
 
 ```powershell
-.\windows\update-odysseus.ps1 -RepoPath C:\path\to\odysseus
+.\windows\2-update-odysseus.ps1 -RepoPath C:\path\to\odysseus
 ```
 
 Remove the background task later:
