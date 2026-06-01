@@ -1,32 +1,42 @@
 #!/usr/bin/env bash
-# Odysseus Updater (Linux)
-# Pulls the latest commits for an Odysseus checkout and rebuilds the Docker
-# stack only when upstream has actually changed.
+# ============================================================
+#  Odysseus Updater (Linux)
 #
-# Usage:
-#   ./update-odysseus.sh                  # uses the current directory
-#   ./update-odysseus.sh /path/to/odysseus
-set -euo pipefail
+#  CONFIG: how often (in HOURS) to check for updates.
+#  Default is 24. Change the number below to 12, 6, etc.
+# ============================================================
+INTERVAL_HOURS=24
+# ============================================================
 
+set -uo pipefail
 REPO="${1:-$(pwd)}"
-cd "$REPO"
 
-echo "Checking for upstream changes..."
-git fetch origin main --quiet
+run_update() {
+    cd "$REPO" || { echo "Cannot cd to $REPO"; return 1; }
+    echo "[$(date '+%Y-%m-%d %H:%M')] Checking for upstream changes..."
+    git fetch origin main --quiet || { echo "git fetch failed"; return 1; }
 
-local_rev="$(git rev-parse HEAD)"
-remote_rev="$(git rev-parse origin/main)"
+    local_rev="$(git rev-parse HEAD)"
+    remote_rev="$(git rev-parse origin/main)"
 
-if [ "$local_rev" = "$remote_rev" ]; then
-    echo "Already up to date."
-    exit 0
-fi
+    if [ "$local_rev" = "$remote_rev" ]; then
+        echo "Already up to date."
+        return 0
+    fi
 
-echo "New commits found (${local_rev:0:7} -> ${remote_rev:0:7}). Pulling..."
-git pull --ff-only origin main
+    echo "New commits (${local_rev:0:7} -> ${remote_rev:0:7}). Pulling..."
+    git pull --ff-only origin main || { echo "git pull --ff-only failed (branch diverged). Resolve manually."; return 1; }
 
-echo "Rebuilding and restarting containers..."
-docker compose up -d --build
+    echo "Rebuilding and restarting containers..."
+    docker compose up -d --build || { echo "docker compose up --build failed"; return 1; }
 
-docker image prune -f >/dev/null
-echo "Update complete."
+    docker image prune -f >/dev/null
+    echo "Update complete."
+}
+
+echo "Odysseus Updater running. Checking every ${INTERVAL_HOURS}h. Press Ctrl+C to stop."
+while true; do
+    run_update || echo "Update run failed; retrying next cycle."
+    echo "Sleeping ${INTERVAL_HOURS}h..."
+    sleep "$(( INTERVAL_HOURS * 3600 ))"
+done

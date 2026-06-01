@@ -1,16 +1,25 @@
 #Requires -Version 5.1
-<#
-    One-time installer (run as Administrator).
-    Registers a Windows scheduled task that runs update-odysseus.ps1 every hour
-    and at logon, so the Odysseus checkout stays current automatically.
-
-    Usage (Administrator PowerShell):
-      .\setup-task.ps1 -RepoPath C:\path\to\odysseus
-
-    Remove later:
-      Unregister-ScheduledTask -TaskName 'Odysseus Auto-Update' -Confirm:$false
-#>
-param([Parameter(Mandatory)][string]$RepoPath)
+# ============================================================
+#  RUN THIS FIRST (as Administrator).
+#
+#  One-time installer. Registers a Windows scheduled task that
+#  starts update-odysseus.ps1 in the background at every logon,
+#  so updates keep happening without an open window.
+#
+#  The check interval lives in update-odysseus.ps1 (default 24h);
+#  override it here with -IntervalHours.
+#
+#  Usage (Administrator PowerShell):
+#    .\setup-task.ps1 -RepoPath C:\path\to\odysseus
+#    .\setup-task.ps1 -RepoPath C:\path\to\odysseus -IntervalHours 12
+#
+#  Remove later:
+#    Unregister-ScheduledTask -TaskName 'Odysseus Auto-Update' -Confirm:$false
+# ============================================================
+param(
+    [Parameter(Mandatory)][string]$RepoPath,
+    [int]$IntervalHours = 24
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -23,20 +32,17 @@ $worker = Join-Path $PSScriptRoot 'update-odysseus.ps1'
 if (-not (Test-Path $worker)) { throw "Worker script not found: $worker" }
 
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-    -Argument "-NoProfile -WindowStyle Hidden -File `"$worker`" -RepoPath `"$RepoPath`""
+    -Argument "-NoProfile -WindowStyle Hidden -File `"$worker`" -RepoPath `"$RepoPath`" -IntervalHours $IntervalHours"
 
-$triggerLogon  = New-ScheduledTaskTrigger -AtLogOn
-$triggerHourly = New-ScheduledTaskTrigger -Once -At (Get-Date) `
-    -RepetitionInterval (New-TimeSpan -Hours 1)
-
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable `
-    -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+$trigger  = New-ScheduledTaskTrigger -AtLogOn
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
 
 Register-ScheduledTask -TaskName 'Odysseus Auto-Update' `
-    -Action $action -Trigger $triggerLogon, $triggerHourly `
-    -Settings $settings `
+    -Action $action -Trigger $trigger -Settings $settings `
     -User "$env:USERDOMAIN\$env:USERNAME" -RunLevel Highest `
-    -Description 'Pulls origin/main and rebuilds the Odysseus Docker stack when upstream changes.' `
+    -Description 'Keeps the Odysseus Docker stack updated from origin/main.' `
     -Force | Out-Null
 
-Write-Host "Registered scheduled task 'Odysseus Auto-Update' (hourly + at logon)."
+Write-Host "Registered 'Odysseus Auto-Update'. It starts at logon and checks every $IntervalHours hour(s)."
+Write-Host "To start it right now without logging out, run:"
+Write-Host "  .\update-odysseus.ps1 -RepoPath `"$RepoPath`" -IntervalHours $IntervalHours"
